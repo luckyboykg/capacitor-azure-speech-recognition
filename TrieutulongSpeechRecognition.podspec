@@ -1,7 +1,7 @@
 
   Pod::Spec.new do |s|
-    s.name = 'CapacitorAzureSpeechRecognition'
-    s.version = '0.0.2'
+    s.name = 'TrieutulongSpeechRecognition'
+    s.version = '0.0.3'
     s.summary = 'Capacitor community plugin for speech recognition combined with Azure SDK'
     s.license = 'MIT'
     s.homepage = 'https://github.com/luckyboykg/capacitor-azure-speech-recognition'
