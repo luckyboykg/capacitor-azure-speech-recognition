@@ -7,7 +7,7 @@ Capacitor community plugin for speech recognition combined with Azure SDK
 To use npm
 
 ```bash
-npm install @capacitor-azure-sdk/speech-recognition
+npm install @trieutulong/speech-recognition
 ```
 
 Sync native files
@@ -33,7 +33,6 @@ public class MainActivity extends BridgeActivity {
     this.init(
         savedInstanceState,
         new ArrayList<Class<? extends Plugin>>() {
-
           {
             // Additional plugins you've installed go here
             // Ex: add(TotallyAwesomePlugin.class);
@@ -43,6 +42,7 @@ public class MainActivity extends BridgeActivity {
       );
   }
 }
+
 ```
 
 ## Configuration

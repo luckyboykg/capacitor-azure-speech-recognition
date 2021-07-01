@@ -1,6 +1,6 @@
 {
-  "name": "@capacitor-azure-sdk/speech-recognition",
-  "version": "0.0.1",
+  "name": "@trieutulong/speech-recognition",
+  "version": "0.0.2",
   "description": "Capacitor community plugin for speech recognition combined with Azure SDK",
   "main": "dist/esm/index.js",
   "types": "dist/esm/index.d.ts",
@@ -53,9 +53,9 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/luckyboykg/speech-recognition"
+    "url": "https://github.com/luckyboykg/capacitor-azure-speech-recognition"
   },
   "bugs": {
-    "url": "https://github.com/luckyboykg/speech-recognition/issues"
+    "url": "https://github.com/luckyboykg/capacitor-azure-speech-recognition/issues"
   }
 }
