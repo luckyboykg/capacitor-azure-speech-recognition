@@ -1,16 +1,12 @@
 export interface SpeechRecognitionPlugin {
-  available(): Promise<{ available: boolean }>;
-  start(options?: UtteranceOptions): Promise<{ matches: String[] }>;
+  start(options: UtteranceOptions): Promise<{ result: string }>;
   stop(): Promise<void>;
-  getSupportedLanguages(): Promise<{ languages: any[] }>;
   hasPermission(): Promise<{ permission: boolean }>;
   requestPermission(): Promise<void>;
 }
 
 export interface UtteranceOptions {
-  language?: string;
-  maxResults?: number;
-  prompt?: string;
-  popup?: boolean;
-  partialResults?: boolean;
+  language: string;
+  subscription: string;
+  region: string;
 }

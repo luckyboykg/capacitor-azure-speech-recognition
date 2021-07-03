@@ -1,7 +1,10 @@
+require 'json'
 
-  Pod::Spec.new do |s|
+package = JSON.parse(File.read(File.join(__dir__, 'package.json')))
+
+Pod::Spec.new do |s|
     s.name = 'TrieutulongSpeechRecognition'
-    s.version = '0.0.3'
+    s.version = '0.0.4'
     s.summary = 'Capacitor community plugin for speech recognition combined with Azure SDK'
     s.license = 'MIT'
     s.homepage = 'https://github.com/luckyboykg/capacitor-azure-speech-recognition'
@@ -10,4 +13,5 @@
     s.source_files = 'ios/Plugin/**/*.{swift,h,m,c,cc,mm,cpp}'
     s.ios.deployment_target  = '12.0'
     s.dependency 'Capacitor'
-  end
+    s.dependency 'MicrosoftCognitiveServicesSpeech-iOS'
+end

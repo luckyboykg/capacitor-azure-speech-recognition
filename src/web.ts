@@ -6,9 +6,6 @@ export class SpeechRecognitionWeb extends WebPlugin {
       platforms: ["web"],
     });
   }
-  available() {
-    throw new Error("Method not implemented.");
-  }
   start(_options: any) {
     throw new Error("Method not implemented.");
   }
