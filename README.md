@@ -51,11 +51,9 @@ No configuration required for this plugin
 
 ## Supported methods
 
-| Name                  | Android | iOS | Web |
-| :-------------------- | :------ | :-- | :-- |
-| available             | ✅      | ✅  | ❌  |
-| start                 | ✅      | ✅  | ❌  |
-| stop                  | ✅      | ✅  | ❌  |
-| getSupportedLanguages | ✅      | ✅  | ❌  |
-| hasPermission         | ✅      | ✅  | ❌  |
-| requestPermission     | ✅      | ✅  | ❌  |
+| Name              | Android | iOS | Web |
+| :---------------- | :------ | :-- | :-- |
+| start             | ❌      | ✅  | ❌  |
+| stop              | ❌      | ✅  | ❌  |
+| hasPermission     | ❌      | ✅  | ❌  |
+| requestPermission | ❌      | ✅  | ❌  |
