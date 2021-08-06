@@ -51,19 +51,22 @@ public class SpeechRecognition: CAPPlugin {
         } catch {
             speechConfig = nil
         }
-
+        
         let language: String = call.getString("language") ?? self.DEFAULT_LANGUAGE
         speechConfig?.speechRecognitionLanguage = language
         
+        let referenceText = call.getString("referenceText") ?? ""
+        
         let audioConfig = SPXAudioConfiguration()
+        let pronunciationAssessmentConfig = try! SPXPronunciationAssessmentConfiguration(referenceText,gradingSystem: SPXPronunciationAssessmentGradingSystem.hundredMark,granularity: SPXPronunciationAssessmentGranularity.word)
         
         let reco = try! SPXSpeechRecognizer(speechConfiguration: speechConfig!, audioConfiguration: audioConfig)
         
-        reco.addRecognizingEventHandler() {reco, evt in
-            print("intermediate recognition result: \(evt.result.text ?? "(no result)")")
-        }
+        // apply the pronunciation assessment configuration to the speech recognizer
+        try! pronunciationAssessmentConfig.apply(to: reco)
         
         let result = try! reco.recognizeOnce()
-        call.resolve(["result": result.text ?? ""])
+        let pronunciationAssessmentResult = SPXPronunciationAssessmentResult(result)
+        call.resolve(["result": pronunciationAssessmentResult?.pronunciationScore ?? 0])
     }
 }

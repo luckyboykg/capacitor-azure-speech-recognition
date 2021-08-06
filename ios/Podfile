@@ -9,7 +9,7 @@ end
 
 target 'Plugin' do
   capacitor_pods
-  pod 'MicrosoftCognitiveServicesSpeech-iOS', '~> 1.6'
+  pod 'MicrosoftCognitiveServicesSpeech-iOS'
 end
 
 target 'PluginTests' do
