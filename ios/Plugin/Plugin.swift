@@ -45,6 +45,8 @@ public class SpeechRecognition: CAPPlugin {
     }
     
     func recognizeFromMic(_ call: CAPPluginCall) {
+        call.keepAlive = true
+        
         var speechConfig: SPXSpeechConfiguration?
         do {
             try speechConfig = SPXSpeechConfiguration(subscription: call.getString("subscription") ?? "", region: call.getString("region") ?? "")
@@ -60,13 +62,22 @@ public class SpeechRecognition: CAPPlugin {
         let audioConfig = SPXAudioConfiguration()
         let pronunciationAssessmentConfig = try! SPXPronunciationAssessmentConfiguration(referenceText,gradingSystem: SPXPronunciationAssessmentGradingSystem.hundredMark,granularity: SPXPronunciationAssessmentGranularity.word)
         
-        let reco = try! SPXSpeechRecognizer(speechConfiguration: speechConfig!, audioConfiguration: audioConfig)
+        let recognizer = try! SPXSpeechRecognizer(speechConfiguration: speechConfig!, audioConfiguration: audioConfig)
         
         // apply the pronunciation assessment configuration to the speech recognizer
-        try! pronunciationAssessmentConfig.apply(to: reco)
+        try! pronunciationAssessmentConfig.apply(to: recognizer)
         
-        let result = try! reco.recognizeOnce()
-        let pronunciationAssessmentResult = SPXPronunciationAssessmentResult(result)
-        call.resolve(["result": pronunciationAssessmentResult?.pronunciationScore ?? 0])
+        recognizer.addRecognizingEventHandler() {_recognizer, event in
+            if(event.result.text?.lowercased() == referenceText.lowercased()){
+                call.resolve(["isStarting": true, "pronunciationScore":0])
+            }
+        }
+        
+        recognizer.addRecognizedEventHandler { _recognizer, event in
+            let pronunciationAssessmentResult = SPXPronunciationAssessmentResult(event.result)
+            call.resolve(["isStarting": false, "pronunciationScore": pronunciationAssessmentResult?.pronunciationScore ?? 0])
+        }
+        
+        try! recognizer.recognizeOnce()
     }
 }

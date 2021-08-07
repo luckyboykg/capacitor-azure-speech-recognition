@@ -1,11 +1,24 @@
+export type CallbackID = string;
+
+export type SpeechRecognitionCallback = (
+  data: SpeechRecognitionResult | null,
+  err?: any
+) => void;
+export interface SpeechRecognitionResult {
+  pronunciationScore: number;
+  isStarting: boolean;
+}
 export interface SpeechRecognitionPlugin {
-  start(options: UtteranceOptions): Promise<{ result: number }>;
+  start(
+    options: SpeechRecognitionOptions,
+    callback: SpeechRecognitionCallback
+  ): Promise<CallbackID>;
   stop(): Promise<void>;
   hasPermission(): Promise<{ permission: boolean }>;
   requestPermission(): Promise<void>;
 }
 
-export interface UtteranceOptions {
+export interface SpeechRecognitionOptions {
   language: string;
   referenceText: string;
   subscription: string;
