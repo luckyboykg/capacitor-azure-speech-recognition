@@ -9,12 +9,6 @@ export class SpeechRecognitionWeb extends WebPlugin {
   start(_options: any) {
     throw new Error("Method not implemented.");
   }
-  stop() {
-    throw new Error("Method not implemented.");
-  }
-  getSupportedLanguages() {
-    throw new Error("Method not implemented.");
-  }
   hasPermission() {
     throw new Error("Method not implemented.");
   }

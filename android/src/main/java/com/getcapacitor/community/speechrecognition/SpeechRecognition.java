@@ -13,12 +13,19 @@ import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 import com.getcapacitor.annotation.Permission;
+import com.microsoft.cognitiveservices.speech.CancellationReason;
+import com.microsoft.cognitiveservices.speech.PronunciationAssessmentConfig;
+import com.microsoft.cognitiveservices.speech.PronunciationAssessmentGradingSystem;
+import com.microsoft.cognitiveservices.speech.PronunciationAssessmentGranularity;
+import com.microsoft.cognitiveservices.speech.PronunciationAssessmentResult;
+import com.microsoft.cognitiveservices.speech.ResultReason;
 import com.microsoft.cognitiveservices.speech.SpeechConfig;
 import com.microsoft.cognitiveservices.speech.SpeechRecognitionResult;
 import com.orhanobut.logger.AndroidLogAdapter;
 import com.orhanobut.logger.BuildConfig;
 import com.orhanobut.logger.Logger;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 @CapacitorPlugin(
   permissions = {
@@ -27,52 +34,38 @@ import java.util.concurrent.Future;
   }
 )
 public class SpeechRecognition extends Plugin implements Constants {
-  public static final String DEFAULT_LANGUAGE = "en-US";
-
   @Override
   public void load() {
     super.load();
 
     Logger.addLogAdapter(
-      new AndroidLogAdapter() {
+            new AndroidLogAdapter() {
 
-        @Override
-        public boolean isLoggable(int priority, @Nullable String tag) {
-          return BuildConfig.DEBUG;
-        }
-      }
+              @Override
+              public boolean isLoggable(int priority, @Nullable String tag) {
+                return BuildConfig.DEBUG;
+              }
+            }
     );
-
-//    bridge
-//      .getWebView()
-//      .post(
-//        new Runnable() {
-//
-//          @Override
-//          public void run() {
-//
-//          }
-//        }
-//      );
   }
 
-  @PluginMethod
+  @PluginMethod(returnType = PluginMethod.RETURN_CALLBACK)
   public void start(PluginCall call) {
     if (!hasAudioPermissions(RECORD_AUDIO_PERMISSION)) {
       call.reject(MISSING_PERMISSION);
       return;
     }
 
-    String language = call.getString("language",DEFAULT_LANGUAGE);
+    String language = call.getString("language", DEFAULT_LANGUAGE);
     String subscription = call.getString("subscription");
     String region = call.getString("region");
+    String referenceText = call.getString("referenceText");
 
     bridge
             .getWebView()
             .post(
                     () -> {
-
-                      fromMic(call,language,subscription, region);
+                      fromMic(call, language, subscription, region, referenceText);
                     }
             );
   }
@@ -80,8 +73,8 @@ public class SpeechRecognition extends Plugin implements Constants {
   @PluginMethod
   public void hasPermission(PluginCall call) {
     call.resolve(
-      new JSObject()
-      .put("permission", hasAudioPermissions(RECORD_AUDIO_PERMISSION))
+            new JSObject()
+                    .put("permission", hasAudioPermissions(RECORD_AUDIO_PERMISSION))
     );
   }
 
@@ -90,11 +83,11 @@ public class SpeechRecognition extends Plugin implements Constants {
     if (!hasAudioPermissions(RECORD_AUDIO_PERMISSION)) {
       if (Build.VERSION.SDK_INT > Build.VERSION_CODES.M) {
         bridge
-          .getActivity()
-          .requestPermissions(
-            new String[] { RECORD_AUDIO_PERMISSION },
-            REQUEST_CODE_PERMISSION
-          );
+                .getActivity()
+                .requestPermissions(
+                        new String[]{RECORD_AUDIO_PERMISSION},
+                        REQUEST_CODE_PERMISSION
+                );
       }
       call.resolve();
     }
@@ -108,18 +101,44 @@ public class SpeechRecognition extends Plugin implements Constants {
     return getPermissionState(type) == PermissionState.GRANTED;
   }
 
-  private void fromMic(PluginCall call, String language, String subscription,String region) {
+  private void fromMic(PluginCall call, String language, String subscription, String region, String referenceText) {
     try {
+      call.setKeepAlive(true);
+
+      PronunciationAssessmentConfig pronunciationAssessmentConfig =
+              new PronunciationAssessmentConfig(referenceText,
+                      PronunciationAssessmentGradingSystem.HundredMark,
+                      PronunciationAssessmentGranularity.Word);
+
       SpeechConfig speechConfig = SpeechConfig.fromSubscription(subscription, region);
       speechConfig.setSpeechRecognitionLanguage(language);
 
       com.microsoft.cognitiveservices.speech.SpeechRecognizer recognizer = new com.microsoft.cognitiveservices.speech.SpeechRecognizer(speechConfig);
-      Future<SpeechRecognitionResult> task = recognizer.recognizeOnceAsync();
-      SpeechRecognitionResult result = task.get();
+      pronunciationAssessmentConfig.applyTo(recognizer);
+
+      recognizer.recognizing.addEventListener((s, e) -> {
+        if (e.getResult().getText().toLowerCase() == referenceText.toLowerCase()) {
+          call.resolve(
+                  new JSObject().put("isStarting", true).put("pronunciationScore", 0)
+          );
+        }
+      });
+
+      Future<SpeechRecognitionResult> future = recognizer.recognizeOnceAsync();
+      SpeechRecognitionResult result = future.get(30, TimeUnit.SECONDS);
+      PronunciationAssessmentResult pronunciationAssessmentResult =
+              PronunciationAssessmentResult.fromResult(result);
+      Double pronunciationScore = pronunciationAssessmentResult.getPronunciationScore();
 
       call.resolve(
-              new JSObject().put("status", "success").put("result", result.getText())
+              new JSObject().put("isStarting", false).put("pronunciationScore", pronunciationScore)
       );
+
+      recognizer.close();
+      speechConfig.close();
+      pronunciationAssessmentConfig.close();
+      result.close();
+
     } catch (Exception ex) {
       Log.e("fromMic", "unexpected " + ex.getMessage());
     }

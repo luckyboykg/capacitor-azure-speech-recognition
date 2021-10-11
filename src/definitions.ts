@@ -13,7 +13,6 @@ export interface SpeechRecognitionPlugin {
     options: SpeechRecognitionOptions,
     callback: SpeechRecognitionCallback
   ): Promise<CallbackID>;
-  stop(): Promise<void>;
   hasPermission(): Promise<{ permission: boolean }>;
   requestPermission(): Promise<void>;
 }

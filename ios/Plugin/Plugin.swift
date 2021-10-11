@@ -20,12 +20,6 @@ public class SpeechRecognition: CAPPlugin {
         }
     }
     
-    @objc func stop(_ call: CAPPluginCall) {
-        DispatchQueue.global(qos: DispatchQoS.QoSClass.default).async {
-            call.resolve()
-        }
-    }
-    
     @objc func hasPermission(_ call: CAPPluginCall) {
         AVAudioSession.sharedInstance().requestRecordPermission { (granted: Bool) in
             call.resolve([
