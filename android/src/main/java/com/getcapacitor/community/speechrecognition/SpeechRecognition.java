@@ -37,11 +37,12 @@ public class SpeechRecognition extends Plugin {
 
   @PluginMethod(returnType = PluginMethod.RETURN_CALLBACK)
   public void start(PluginCall call) {
-    if (!hasAudioPermissions(Manifest.permission.RECORD_AUDIO)) {
+    if (!hasAudioPermissions()) {
       call.reject(MISSING_PERMISSION);
       return;
     }
-
+    call.setKeepAlive(true);
+    
     String language = call.getString("language", DEFAULT_LANGUAGE);
     String subscription = call.getString("subscription");
     String region = call.getString("region");
@@ -56,29 +57,22 @@ public class SpeechRecognition extends Plugin {
       );
   }
 
-  @PluginMethod
+  @PluginMethod()
   public void hasPermission(PluginCall call) {
     call.resolve(
       new JSObject()
-      .put("permission", hasAudioPermissions(Manifest.permission.RECORD_AUDIO))
+      .put("permission", hasAudioPermissions())
     );
   }
 
-  @PluginMethod
+  @PluginMethod()
   public void requestPermission(PluginCall call) {
-    if (hasAudioPermissions(Manifest.permission.RECORD_AUDIO)) {
+    if (hasAudioPermissions()) {
       call.resolve();
       return;
     }
 
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-      //      bridge
-      //        .getActivity()
-      //        .requestPermissions(
-      //          new String[]{Manifest.permission.RECORD_AUDIO},
-      //          REQUEST_CODE_PERMISSION
-      //        );
-
       ActivityCompat.requestPermissions(
         bridge.getActivity(),
         new String[] { Manifest.permission.RECORD_AUDIO },
@@ -88,17 +82,10 @@ public class SpeechRecognition extends Plugin {
     call.resolve();
   }
 
-  private boolean hasAudioPermissions(String type) {
+  private boolean hasAudioPermissions() {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
       return true;
     }
-    //    PermissionState permissionState = getPermissionState(type);
-    //    return permissionState == PermissionState.GRANTED;
-
-    int test = ContextCompat.checkSelfPermission(
-      bridge.getActivity(),
-      Manifest.permission.RECORD_AUDIO
-    );
 
     return (
       ContextCompat.checkSelfPermission(
@@ -117,8 +104,6 @@ public class SpeechRecognition extends Plugin {
     String referenceText
   ) {
     try {
-      call.setKeepAlive(true);
-
       PronunciationAssessmentConfig pronunciationAssessmentConfig = new PronunciationAssessmentConfig(
         referenceText,
         PronunciationAssessmentGradingSystem.HundredMark,
