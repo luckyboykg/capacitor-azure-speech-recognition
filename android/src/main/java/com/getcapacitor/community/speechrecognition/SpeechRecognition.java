@@ -3,9 +3,6 @@ package com.getcapacitor.community.speechrecognition;
 import android.Manifest;
 import android.os.Build;
 import android.util.Log;
-
-import androidx.annotation.Nullable;
-
 import com.getcapacitor.JSObject;
 import com.getcapacitor.PermissionState;
 import com.getcapacitor.Plugin;
@@ -13,45 +10,33 @@ import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 import com.getcapacitor.annotation.Permission;
-import com.microsoft.cognitiveservices.speech.CancellationReason;
 import com.microsoft.cognitiveservices.speech.PronunciationAssessmentConfig;
 import com.microsoft.cognitiveservices.speech.PronunciationAssessmentGradingSystem;
 import com.microsoft.cognitiveservices.speech.PronunciationAssessmentGranularity;
 import com.microsoft.cognitiveservices.speech.PronunciationAssessmentResult;
-import com.microsoft.cognitiveservices.speech.ResultReason;
 import com.microsoft.cognitiveservices.speech.SpeechConfig;
 import com.microsoft.cognitiveservices.speech.SpeechRecognitionResult;
-import com.orhanobut.logger.AndroidLogAdapter;
-import com.orhanobut.logger.BuildConfig;
-import com.orhanobut.logger.Logger;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 @CapacitorPlugin(
   permissions = {
-          @Permission(alias = "RECORD_AUDIO",
-                  strings = {Manifest.permission.RECORD_AUDIO})
+    @Permission(
+      strings = { Manifest.permission.RECORD_AUDIO },
+      alias = "record_audio"
+    ),
   }
 )
 public class SpeechRecognition extends Plugin implements Constants {
+
   @Override
   public void load() {
     super.load();
-
-    Logger.addLogAdapter(
-            new AndroidLogAdapter() {
-
-              @Override
-              public boolean isLoggable(int priority, @Nullable String tag) {
-                return BuildConfig.DEBUG;
-              }
-            }
-    );
   }
 
   @PluginMethod(returnType = PluginMethod.RETURN_CALLBACK)
   public void start(PluginCall call) {
-    if (!hasAudioPermissions(RECORD_AUDIO_PERMISSION)) {
+    if (!hasAudioPermissions(Manifest.permission.RECORD_AUDIO)) {
       call.reject(MISSING_PERMISSION);
       return;
     }
@@ -62,35 +47,38 @@ public class SpeechRecognition extends Plugin implements Constants {
     String referenceText = call.getString("referenceText");
 
     bridge
-            .getWebView()
-            .post(
-                    () -> {
-                      fromMic(call, language, subscription, region, referenceText);
-                    }
-            );
+      .getWebView()
+      .post(
+        () -> {
+          fromMic(call, language, subscription, region, referenceText);
+        }
+      );
   }
 
   @PluginMethod
   public void hasPermission(PluginCall call) {
     call.resolve(
-            new JSObject()
-                    .put("permission", hasAudioPermissions(RECORD_AUDIO_PERMISSION))
+      new JSObject()
+      .put("permission", hasAudioPermissions(Manifest.permission.RECORD_AUDIO))
     );
   }
 
   @PluginMethod
   public void requestPermission(PluginCall call) {
-    if (!hasAudioPermissions(RECORD_AUDIO_PERMISSION)) {
-      if (Build.VERSION.SDK_INT > Build.VERSION_CODES.M) {
-        bridge
-                .getActivity()
-                .requestPermissions(
-                        new String[]{RECORD_AUDIO_PERMISSION},
-                        REQUEST_CODE_PERMISSION
-                );
-      }
+    if (hasAudioPermissions(Manifest.permission.RECORD_AUDIO)) {
       call.resolve();
+      return;
     }
+
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+      bridge
+        .getActivity()
+        .requestPermissions(
+          new String[] { Manifest.permission.RECORD_AUDIO },
+          REQUEST_CODE_PERMISSION
+        );
+    }
+    call.resolve();
   }
 
   private boolean hasAudioPermissions(String type) {
@@ -98,47 +86,66 @@ public class SpeechRecognition extends Plugin implements Constants {
       return true;
     }
 
-    return getPermissionState(type) == PermissionState.GRANTED;
+    PermissionState permissionState = getPermissionState(type);
+    return permissionState == PermissionState.GRANTED;
   }
 
-  private void fromMic(PluginCall call, String language, String subscription, String region, String referenceText) {
+  private void fromMic(
+    PluginCall call,
+    String language,
+    String subscription,
+    String region,
+    String referenceText
+  ) {
     try {
       call.setKeepAlive(true);
 
-      PronunciationAssessmentConfig pronunciationAssessmentConfig =
-              new PronunciationAssessmentConfig(referenceText,
-                      PronunciationAssessmentGradingSystem.HundredMark,
-                      PronunciationAssessmentGranularity.Word);
+      PronunciationAssessmentConfig pronunciationAssessmentConfig = new PronunciationAssessmentConfig(
+        referenceText,
+        PronunciationAssessmentGradingSystem.HundredMark,
+        PronunciationAssessmentGranularity.Word
+      );
 
-      SpeechConfig speechConfig = SpeechConfig.fromSubscription(subscription, region);
+      SpeechConfig speechConfig = SpeechConfig.fromSubscription(
+        subscription,
+        region
+      );
       speechConfig.setSpeechRecognitionLanguage(language);
 
-      com.microsoft.cognitiveservices.speech.SpeechRecognizer recognizer = new com.microsoft.cognitiveservices.speech.SpeechRecognizer(speechConfig);
+      com.microsoft.cognitiveservices.speech.SpeechRecognizer recognizer = new com.microsoft.cognitiveservices.speech.SpeechRecognizer(
+        speechConfig
+      );
       pronunciationAssessmentConfig.applyTo(recognizer);
 
-      recognizer.recognizing.addEventListener((s, e) -> {
-        if (e.getResult().getText().toLowerCase() == referenceText.toLowerCase()) {
-          call.resolve(
-                  new JSObject().put("isStarting", true).put("pronunciationScore", 0)
-          );
+      recognizer.recognizing.addEventListener(
+        (s, e) -> {
+          if (e.getResult().getText().equalsIgnoreCase(referenceText)) {
+            call.resolve(
+              new JSObject()
+                .put("isStarting", true)
+                .put("pronunciationScore", 0)
+            );
+          }
         }
-      });
+      );
 
       Future<SpeechRecognitionResult> future = recognizer.recognizeOnceAsync();
       SpeechRecognitionResult result = future.get(30, TimeUnit.SECONDS);
-      PronunciationAssessmentResult pronunciationAssessmentResult =
-              PronunciationAssessmentResult.fromResult(result);
+      PronunciationAssessmentResult pronunciationAssessmentResult = PronunciationAssessmentResult.fromResult(
+        result
+      );
       Double pronunciationScore = pronunciationAssessmentResult.getPronunciationScore();
 
       call.resolve(
-              new JSObject().put("isStarting", false).put("pronunciationScore", pronunciationScore)
+        new JSObject()
+          .put("isStarting", false)
+          .put("pronunciationScore", pronunciationScore)
       );
 
       recognizer.close();
       speechConfig.close();
       pronunciationAssessmentConfig.close();
       result.close();
-
     } catch (Exception ex) {
       Log.e("fromMic", "unexpected " + ex.getMessage());
     }
