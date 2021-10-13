@@ -7,7 +7,6 @@ import android.util.Log;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import com.getcapacitor.JSObject;
-import com.getcapacitor.PermissionState;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
@@ -30,12 +29,11 @@ import java.util.concurrent.TimeUnit;
     ),
   }
 )
-public class SpeechRecognition extends Plugin implements Constants {
+public class SpeechRecognition extends Plugin {
 
-  @Override
-  public void load() {
-    super.load();
-  }
+  private static final int REQUEST_CODE_PERMISSION = 2001;
+  private static final String MISSING_PERMISSION = "Missing permission";
+  private static final String DEFAULT_LANGUAGE = "en-US";
 
   @PluginMethod(returnType = PluginMethod.RETURN_CALLBACK)
   public void start(PluginCall call) {
