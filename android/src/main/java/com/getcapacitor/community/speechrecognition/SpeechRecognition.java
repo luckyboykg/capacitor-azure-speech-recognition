@@ -12,14 +12,17 @@ import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 import com.getcapacitor.annotation.Permission;
+import com.microsoft.cognitiveservices.speech.CancellationDetails;
+import com.microsoft.cognitiveservices.speech.CancellationReason;
 import com.microsoft.cognitiveservices.speech.PronunciationAssessmentConfig;
 import com.microsoft.cognitiveservices.speech.PronunciationAssessmentGradingSystem;
 import com.microsoft.cognitiveservices.speech.PronunciationAssessmentGranularity;
 import com.microsoft.cognitiveservices.speech.PronunciationAssessmentResult;
+import com.microsoft.cognitiveservices.speech.PropertyId;
+import com.microsoft.cognitiveservices.speech.ResultReason;
 import com.microsoft.cognitiveservices.speech.SpeechConfig;
 import com.microsoft.cognitiveservices.speech.SpeechRecognitionResult;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
+import com.microsoft.cognitiveservices.speech.SpeechRecognizer;
 
 @CapacitorPlugin(
   permissions = {
@@ -51,15 +54,12 @@ public class SpeechRecognition extends Plugin {
     fromMic(call, language, subscription, region, referenceText);
   }
 
-  @PluginMethod()
+  @PluginMethod
   public void hasPermission(PluginCall call) {
-    call.resolve(
-      new JSObject()
-      .put("permission", hasAudioPermissions())
-    );
+    call.resolve(new JSObject().put("permission", hasAudioPermissions()));
   }
 
-  @PluginMethod()
+  @PluginMethod
   public void requestPermission(PluginCall call) {
     if (hasAudioPermissions()) {
       call.resolve();
@@ -109,43 +109,74 @@ public class SpeechRecognition extends Plugin {
         region
       );
       speechConfig.setSpeechRecognitionLanguage(language);
-
-      com.microsoft.cognitiveservices.speech.SpeechRecognizer recognizer = new com.microsoft.cognitiveservices.speech.SpeechRecognizer(
-        speechConfig
+      speechConfig.setProperty(
+        PropertyId.SpeechServiceConnection_EndSilenceTimeoutMs,
+        "3000"
       );
-      pronunciationAssessmentConfig.applyTo(recognizer);
 
-      recognizer.recognizing.addEventListener(
-        (s, e) -> {
-          if (e.getResult().getText().equalsIgnoreCase(referenceText)) {
-            call.resolve(
-              new JSObject()
-                .put("isStarting", true)
-                .put("pronunciationScore", 0)
+      SpeechRecognizer recognizer = new SpeechRecognizer(speechConfig);
+      {
+        pronunciationAssessmentConfig.applyTo(recognizer);
+
+        recognizer.recognizing.addEventListener(
+          (s, e) -> {
+            if (e.getResult().getText().equalsIgnoreCase(referenceText)) {
+              call.resolve(
+                new JSObject()
+                  .put("isStarting", true)
+                  .put("pronunciationScore", 0)
+              );
+            }
+          }
+        );
+
+        SpeechRecognitionResult result = recognizer.recognizeOnceAsync().get();
+
+        if (result.getReason() == ResultReason.RecognizedSpeech) {
+          PronunciationAssessmentResult pronunciationAssessmentResult = PronunciationAssessmentResult.fromResult(
+            result
+          );
+          Double pronunciationScore = pronunciationAssessmentResult.getPronunciationScore();
+
+          call.resolve(
+            new JSObject()
+              .put("isStarting", false)
+              .put("pronunciationScore", pronunciationScore)
+          );
+        } else if (result.getReason() == ResultReason.NoMatch) {
+          call.resolve(
+            new JSObject().put("isStarting", false).put("pronunciationScore", 0)
+          );
+        } else if (result.getReason() == ResultReason.Canceled) {
+          CancellationDetails cancellation = CancellationDetails.fromResult(
+            result
+          );
+          System.out.println("CANCELED: Reason=" + cancellation.getReason());
+
+          if (cancellation.getReason() == CancellationReason.Error) {
+            System.out.println(
+              "CANCELED: ErrorCode=" + cancellation.getErrorCode()
+            );
+            System.out.println(
+              "CANCELED: ErrorDetails=" + cancellation.getErrorDetails()
+            );
+            System.out.println(
+              "CANCELED: Did you update the subscription info?"
             );
           }
+          call.resolve(
+            new JSObject().put("isStarting", false).put("pronunciationScore", 0)
+          );
         }
-      );
 
-      Future<SpeechRecognitionResult> future = recognizer.recognizeOnceAsync();
-      SpeechRecognitionResult result = future.get(30, TimeUnit.SECONDS);
-      PronunciationAssessmentResult pronunciationAssessmentResult = PronunciationAssessmentResult.fromResult(
-        result
-      );
-      Double pronunciationScore = pronunciationAssessmentResult.getPronunciationScore();
+        result.close();
+      }
 
-      call.resolve(
-        new JSObject()
-          .put("isStarting", false)
-          .put("pronunciationScore", pronunciationScore)
-      );
-
-      recognizer.close();
-      speechConfig.close();
       pronunciationAssessmentConfig.close();
-      result.close();
-      call.release(bridge);
+      speechConfig.close();
+      recognizer.close();
 
+      call.release(bridge);
     } catch (Exception ex) {
       Log.e("fromMic", "unexpected " + ex.getMessage());
     }
