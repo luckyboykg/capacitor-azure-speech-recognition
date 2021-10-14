@@ -57,6 +57,6 @@ dependencies {
     testImplementation "junit:junit:$junitVersion"
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
-    implementation group: 'com.microsoft.cognitiveservices.speech', name: 'client-sdk', version: "1.18.0", ext: "jar"
+    implementation 'com.microsoft.cognitiveservices.speech:client-sdk:1.18.0'
     implementation 'com.orhanobut:logger:2.2.0'
 }

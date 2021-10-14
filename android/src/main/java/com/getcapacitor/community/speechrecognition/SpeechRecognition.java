@@ -42,19 +42,13 @@ public class SpeechRecognition extends Plugin {
       return;
     }
     call.setKeepAlive(true);
-    
+
     String language = call.getString("language", DEFAULT_LANGUAGE);
     String subscription = call.getString("subscription");
     String region = call.getString("region");
     String referenceText = call.getString("referenceText");
 
-    bridge
-      .getWebView()
-      .post(
-        () -> {
-          fromMic(call, language, subscription, region, referenceText);
-        }
-      );
+    fromMic(call, language, subscription, region, referenceText);
   }
 
   @PluginMethod()
@@ -150,6 +144,8 @@ public class SpeechRecognition extends Plugin {
       speechConfig.close();
       pronunciationAssessmentConfig.close();
       result.close();
+      call.release(bridge);
+
     } catch (Exception ex) {
       Log.e("fromMic", "unexpected " + ex.getMessage());
     }

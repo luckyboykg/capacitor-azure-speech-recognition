@@ -70,6 +70,7 @@ public class SpeechRecognition: CAPPlugin {
         recognizer.addRecognizedEventHandler { _recognizer, event in
             let pronunciationAssessmentResult = SPXPronunciationAssessmentResult(event.result)
             call.resolve(["isStarting": false, "pronunciationScore": pronunciationAssessmentResult?.pronunciationScore ?? 0])
+            call.keepAlive = false;
         }
         
         try! recognizer.recognizeOnce()
