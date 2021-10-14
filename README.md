@@ -1,6 +1,6 @@
-# Capacitor Speech Recognition Plugin Combined With Azure SDK
+# Capacitor Speech Recognition Plugin Combined With Pronunciation Assessment from Azure SDK
 
-Capacitor community plugin for speech recognition combined with Azure SDK
+Capacitor community plugin for speech recognition combined with Pronunciation Assessment from Azure SDK
 
 ## Installation
 
@@ -35,9 +35,9 @@ public class MainActivity extends BridgeActivity {
 
 ```
 
-## Configuration
+## Pronunciation Assessment
 
-No configuration required for this plugin
+Pronunciation assessment with the Speech SDK: https://docs.microsoft.com/en-us/azure/cognitive-services/speech-service/how-to-pronunciation-assessment?pivots=programming-language-java
 
 ## Supported methods
 
