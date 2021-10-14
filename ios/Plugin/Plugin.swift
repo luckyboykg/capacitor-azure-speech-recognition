@@ -50,6 +50,7 @@ public class SpeechRecognition: CAPPlugin {
         
         let language: String = call.getString("language") ?? self.DEFAULT_LANGUAGE
         speechConfig?.speechRecognitionLanguage = language
+        speechConfig?.setPropertyTo("3000", byName: "3201")
         
         let referenceText = call.getString("referenceText") ?? ""
         
