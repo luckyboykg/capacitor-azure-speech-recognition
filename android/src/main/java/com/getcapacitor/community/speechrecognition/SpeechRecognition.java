@@ -23,6 +23,7 @@ import com.microsoft.cognitiveservices.speech.ResultReason;
 import com.microsoft.cognitiveservices.speech.SpeechConfig;
 import com.microsoft.cognitiveservices.speech.SpeechRecognitionResult;
 import com.microsoft.cognitiveservices.speech.SpeechRecognizer;
+import java.util.concurrent.ExecutionException;
 
 @CapacitorPlugin(
   permissions = {
@@ -130,55 +131,75 @@ public class SpeechRecognition extends Plugin {
           }
         );
 
-        SpeechRecognitionResult result = recognizer.recognizeOnceAsync().get();
+        recognizer.recognized.addEventListener(
+          (s, e) -> {
+            if (e.getResult().getReason() == ResultReason.RecognizedSpeech) {
+              PronunciationAssessmentResult pronunciationAssessmentResult = PronunciationAssessmentResult.fromResult(
+                e.getResult()
+              );
+              Double pronunciationScore = pronunciationAssessmentResult.getPronunciationScore();
 
-        if (result.getReason() == ResultReason.RecognizedSpeech) {
-          PronunciationAssessmentResult pronunciationAssessmentResult = PronunciationAssessmentResult.fromResult(
-            result
-          );
-          Double pronunciationScore = pronunciationAssessmentResult.getPronunciationScore();
+              call.resolve(
+                new JSObject()
+                  .put("isStarting", false)
+                  .put("pronunciationScore", pronunciationScore)
+              );
+            } else if (e.getResult().getReason() == ResultReason.NoMatch) {
+              call.resolve(
+                new JSObject()
+                  .put("isStarting", false)
+                  .put("pronunciationScore", 0)
+              );
+            }
 
-          call.resolve(
-            new JSObject()
-              .put("isStarting", false)
-              .put("pronunciationScore", pronunciationScore)
-          );
-        } else if (result.getReason() == ResultReason.NoMatch) {
-          call.resolve(
-            new JSObject().put("isStarting", false).put("pronunciationScore", 0)
-          );
-        } else if (result.getReason() == ResultReason.Canceled) {
-          CancellationDetails cancellation = CancellationDetails.fromResult(
-            result
-          );
-          System.out.println("CANCELED: Reason=" + cancellation.getReason());
-
-          if (cancellation.getReason() == CancellationReason.Error) {
-            System.out.println(
-              "CANCELED: ErrorCode=" + cancellation.getErrorCode()
-            );
-            System.out.println(
-              "CANCELED: ErrorDetails=" + cancellation.getErrorDetails()
-            );
-            System.out.println(
-              "CANCELED: Did you update the subscription info?"
+            stopRecognizer(
+              recognizer,
+              pronunciationAssessmentConfig,
+              speechConfig,
+              call
             );
           }
-          call.resolve(
-            new JSObject().put("isStarting", false).put("pronunciationScore", 0)
-          );
-        }
+        );
 
-        result.close();
+        recognizer.canceled.addEventListener(
+          (s, e) -> {
+            call.resolve(
+              new JSObject()
+                .put("isStarting", false)
+                .put("pronunciationScore", 0)
+            );
+
+            stopRecognizer(
+              recognizer,
+              pronunciationAssessmentConfig,
+              speechConfig,
+              call
+            );
+          }
+        );
+
+        recognizer.startContinuousRecognitionAsync().get();
       }
+    } catch (Exception ex) {
+      Log.e("fromMic", "unexpected " + ex.getMessage());
+    }
+  }
+
+  private void stopRecognizer(
+    SpeechRecognizer recognizer,
+    PronunciationAssessmentConfig pronunciationAssessmentConfig,
+    SpeechConfig speechConfig,
+    PluginCall call
+  ) {
+    try {
+      recognizer.stopContinuousRecognitionAsync().get();
 
       pronunciationAssessmentConfig.close();
       speechConfig.close();
       recognizer.close();
-
       call.release(bridge);
-    } catch (Exception ex) {
-      Log.e("fromMic", "unexpected " + ex.getMessage());
+    } catch (ExecutionException | InterruptedException e) {
+      e.printStackTrace();
     }
   }
 }

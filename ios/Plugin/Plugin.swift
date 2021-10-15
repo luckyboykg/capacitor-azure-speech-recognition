@@ -71,9 +71,19 @@ public class SpeechRecognition: CAPPlugin {
         recognizer.addRecognizedEventHandler { _recognizer, event in
             let pronunciationAssessmentResult = SPXPronunciationAssessmentResult(event.result)
             call.resolve(["isStarting": false, "pronunciationScore": pronunciationAssessmentResult?.pronunciationScore ?? 0])
-            call.keepAlive = false;
+            self.stopRecognizer(call: call, recognizer: recognizer)
         }
         
-        try! recognizer.recognizeOnce()
+        recognizer.addCanceledEventHandler { _recognizer, event in
+            call.resolve(["isStarting": false, "pronunciationScore": 0])
+            self.stopRecognizer(call: call, recognizer: recognizer)
+        }
+        
+        try! recognizer.startContinuousRecognition()
+    }
+    
+    func stopRecognizer(call: CAPPluginCall, recognizer: SPXSpeechRecognizer){
+        try! recognizer.stopContinuousRecognition()
+        call.keepAlive = false;
     }
 }
